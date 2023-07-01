@@ -1,0 +1,37 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        // classpath 'foundation.icon:gradle-javaee-plugin:0.7.8'
+        classpath 'foundation.icon:gradle-javaee-plugin:0.8.3'
+    }
+}
+
+// plugins {
+//     id 'java'
+//     id 'application'
+// }
+
+subprojects {
+    repositories {
+        mavenCentral()
+    }
+
+    apply plugin: 'java'
+    apply plugin: 'foundation.icon.javaee'
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    // need to add this option to retrieve formal parameter names
+    compileJava {
+        options.compilerArgs += ['-parameters']
+    }
+}
+
+// test {
+//     useJUnitPlatform()
+// }

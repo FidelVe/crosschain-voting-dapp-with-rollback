@@ -51,4 +51,5 @@ scripts/venv
 ### Misc
 .env
 node_modules
-contract
+contract/scripts
+*.swp*

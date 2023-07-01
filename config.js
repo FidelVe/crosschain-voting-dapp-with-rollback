@@ -26,5 +26,7 @@ module.exports = {
   PK: PK,
   network: USE_NETWORK,
   RPC_URL: config.rpc[USE_NETWORK],
-  NID: config.nid[USE_NETWORK]
+  NID: config.nid[USE_NETWORK],
+  jarPath:
+    "./contract/crosschain-voting-dapp/build/libs/crosschain-voting-dapp-optimized.jar"
 };

@@ -6,7 +6,7 @@ java {
 dependencies {
     compileOnly("foundation.icon:javaee-api:0.9.4")
     compileOnly("foundation.icon:btp2-xcall:0.6.2")
-    compileOnly("foundation.icon:javaee-scorex:0.5.4.1")
+    implementation("foundation.icon:javaee-scorex:0.5.4.1")
 
     annotationProcessor("foundation.icon:javaee-score-client:0.10.3")
     compileOnly("foundation.icon:javaee-score-client:0.10.3")

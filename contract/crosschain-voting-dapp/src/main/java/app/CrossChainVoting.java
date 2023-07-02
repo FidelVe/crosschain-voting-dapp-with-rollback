@@ -16,7 +16,7 @@
 
 package app;
 
-import foundation.icon.btp.xcall.CallServiceReceiver;
+//import foundation.icon.btp.xcall.CallServiceReceiver;
 import foundation.icon.score.client.ScoreClient;
 import score.Address;
 import score.Context;
@@ -33,7 +33,8 @@ import java.math.BigInteger;
 import java.util.Map;
 
 @ScoreClient
-public class CrossChainVoting implements CallServiceReceiver {
+//public class CrossChainVoting implements CallServiceReceiver {
+public class CrossChainVoting {
 //    private final XCallProxy xCall;
 //    private final String callSvcBtpAddr;
     private final VarDB<BigInteger> countOfYes = Context.newVarDB( "yes", BigInteger.class);
@@ -104,7 +105,7 @@ public class CrossChainVoting implements CallServiceReceiver {
 //        }
 //    }
 //
-    @Override
+//    @Override
     @External
     public void handleCallMessage(String _from, byte[] _data) {
 //        onlyCallService();

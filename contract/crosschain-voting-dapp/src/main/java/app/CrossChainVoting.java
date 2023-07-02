@@ -35,36 +35,76 @@ import java.util.Map;
 @ScoreClient
 //public class CrossChainVoting implements CallServiceReceiver {
 public class CrossChainVoting {
-//    private final XCallProxy xCall;
+    //    private final XCallProxy xCall;
 //    private final String callSvcBtpAddr;
-    private final VarDB<BigInteger> countOfYes = Context.newVarDB( "yes", BigInteger.class);
+    private final VarDB<BigInteger> countOfYes = Context.newVarDB("yes", BigInteger.class);
     private final VarDB<BigInteger> countOfNo = Context.newVarDB("no", BigInteger.class);
+    private final VarDB<String> destinationBtpAddress = Context.newVarDB("btpAddress", String.class);
+    private final VarDB<Address> xcallContractAddress = Context.newVarDB("xcall", Address.class);
 
-    public CrossChainVoting(Address _callService) {
+    public CrossChainVoting(Address _sourceXCallContract, String _destinationBtpAddress) {
 //        this.xCall = new XCallProxy(_callService);
 //        this.callSvcBtpAddr = xCall.getBtpAddress();
+        this.destinationBtpAddress.set(_destinationBtpAddress);
+        this.xcallContractAddress.set(_sourceXCallContract);
         this.countOfNo.set(BigInteger.ZERO);
         this.countOfYes.set(BigInteger.ZERO);
+    }
+
+    private BigInteger _sendCallMessage(byte[] _data, @Optional byte[] _rollback) {
+        Address xcallSourceAddress = this.xcallContractAddress.get();
+        String _to = this.destinationBtpAddress.get();
+        return Context.call(BigInteger.class, xcallSourceAddress, "sendCallMessage", _to, _data, _rollback);
     }
 
     @Payable
     @External
     public void voteYes() {
+        // Increase local count of Yes votes
         BigInteger sum = this.countOfYes.get().add(BigInteger.ONE);
         this.countOfYes.set(sum);
+
+        // make call to xcall
+        byte[] _rollback = null;
+        String payload = "voteYes";
+        byte[] bytePayload = payload.getBytes();
+
+        BigInteger id = _sendCallMessage(bytePayload, _rollback);
+        Context.println("sendCallMessage Response:" + id);
     }
+
     @Payable
     @External
     public void voteNo() {
+        // Increase local count of No votes
         BigInteger sum = this.countOfNo.get().add(BigInteger.ONE);
         this.countOfNo.set(sum);
+
+        // make call to xcall
+        byte[] _rollback = null;
+        String payload = "voteNo";
+        byte[] bytePayload = payload.getBytes();
+
+        BigInteger id = _sendCallMessage(bytePayload, _rollback);
+        Context.println("sendCallMessage Response:" + id);
     }
-    @External(readonly=true)
+
+    @External(readonly = true)
     public Map<String, BigInteger> getVotes() {
         Map<String, BigInteger> votesMap = new HashMap<>();
         votesMap.put("yes", this.countOfYes.get());
         votesMap.put("no", this.countOfNo.get());
         return votesMap;
+    }
+
+    @External(readonly = true)
+    public String getDestinationBtpAddress() {
+        return this.destinationBtpAddress.get();
+    }
+
+    @External(readonly = true)
+    public Address getXCallContractAddress() {
+        return this.xcallContractAddress.get();
     }
 //    private void onlyCallService() {
 //        Context.require(Context.getCaller().equals(xCall.address()), "onlyCallService");

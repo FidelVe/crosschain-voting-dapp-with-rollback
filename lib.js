@@ -10,7 +10,7 @@ const {
   IconWallet
 } = IconService.default;
 
-const { contract, PK, NID, RPC_URL, jarPath } = config;
+const { contract, network, PK, NID, RPC_URL, jarPath } = config;
 
 const HTTP_PROVIDER = new HttpProvider(RPC_URL);
 const ICON_SERVICE = new IconService.default(HTTP_PROVIDER);
@@ -25,6 +25,21 @@ function getContractByteCode() {
   }
 }
 
+function getDappDeploymentsParams() {
+  const result = {
+    _sourceXCallContract: config.contract.icon.xcall,
+    _destinationBtpAddress: getBtpAddress(
+      network.sepolia.label,
+      contract.sepolia.dapp
+    )
+  };
+  return result;
+}
+
+function getBtpAddress(label, address) {
+  return `btp://${label}/${address}`;
+}
+
 async function deployContract(params) {
   try {
     const content = getContractByteCode();
@@ -33,7 +48,7 @@ async function deployContract(params) {
       .content(`0x${content}`)
       .params(params)
       .from(WALLET.getAddress())
-      .to(contract.chain)
+      .to(contract.icon.chain)
       .nid(NID)
       .version(3)
       .timestamp(new Date().getTime() * 1000)
@@ -79,7 +94,8 @@ const lib = {
   deployContract,
   getTxResult,
   config,
-  getScoreApi
+  getScoreApi,
+  getDappDeploymentsParams
 };
 
 module.exports = lib;

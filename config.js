@@ -56,5 +56,6 @@ module.exports = {
   XCALL_PRIMARY: config.contract[NETWORK_PRIMARY].xcall,
   XCALL_SECONDARY: config.contract[NETWORK_SECONDARY].xcall,
   NETWORK_LABEL_PRIMARY: config.network[NETWORK_PRIMARY].label,
-  NETWORK_LABEL_SECONDARY: config.network[NETWORK_SECONDARY].label
+  NETWORK_LABEL_SECONDARY: config.network[NETWORK_SECONDARY].label,
+  deploymentsPath: "./deployments.json"
 };

@@ -24,7 +24,8 @@ const {
   XCALL_PRIMARY,
   XCALL_SECONDARY,
   // NETWORK_LABEL_PRIMARY,
-  NETWORK_LABEL_SECONDARY
+  NETWORK_LABEL_SECONDARY,
+  deploymentsPath
 } = config;
 
 const HTTP_PROVIDER = new HttpProvider(ICON_RPC_URL);
@@ -45,6 +46,36 @@ function getIconContractByteCode() {
   } catch (e) {
     console.log(e);
     throw new Error("Error reading contract info");
+  }
+}
+
+function isDeployed() {
+  try {
+    if (!fs.existsSync(deploymentsPath)) {
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.log(e);
+    throw new Error("Error checking deployments");
+  }
+}
+
+function saveDeployments(deployments) {
+  try {
+    fs.writeFileSync(deploymentsPath, JSON.stringify(deployments));
+  } catch (e) {
+    console.log(e);
+    throw new Error("Error saving deployments");
+  }
+}
+
+function getDeployments() {
+  try {
+    return JSON.parse(fs.readFileSync(deploymentsPath));
+  } catch (e) {
+    console.log(e);
+    throw new Error("Error reading deployments");
   }
 }
 
@@ -146,10 +177,10 @@ async function deployEvm() {
         console.log("txHash", txHash);
       });
 
-    console.log(
-      "\n# Deployed contract address:",
-      deployedContract.options.address
-    );
+    // console.log(
+    //   "\n# Deployed contract address:",
+    //   deployedContract.options.address
+    // );
     return deployedContract.options.address;
   } catch (e) {
     console.log(e);
@@ -185,6 +216,27 @@ async function deployIcon(evmDappContract) {
     throw new Error("Error deploying contract ICON chain");
   }
 }
+
+function strToHex(str) {
+  var hex = "";
+  for (var i = 0; i < str.length; i++) {
+    hex += "" + str.charCodeAt(i).toString(16);
+  }
+  return "0x" + hex;
+}
+function strToHexPadded(str) {
+  var hex = "";
+  for (var i = 0; i < str.length; i++) {
+    hex +=
+      "" +
+      str
+        .charCodeAt(i)
+        .toString(16)
+        .padStart(2, "0");
+  }
+  return "0x" + hex;
+}
+
 const lib = {
   deployContract,
   getTxResult,
@@ -192,7 +244,12 @@ const lib = {
   getScoreApi,
   getIconDappDeploymentsParams,
   deployIcon,
-  deployEvm
+  deployEvm,
+  isDeployed,
+  saveDeployments,
+  getDeployments,
+  strToHex,
+  strToHexPadded
 };
 
 module.exports = lib;

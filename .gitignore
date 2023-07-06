@@ -55,3 +55,4 @@ node_modules
 contract/scripts
 *.swp*
 *foo*
+deployments.json

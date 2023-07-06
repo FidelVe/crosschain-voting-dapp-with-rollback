@@ -1,6 +1,7 @@
 const IconService = require("icon-sdk-js");
 const fs = require("fs");
 const config = require("./config");
+const Web3 = require("web3");
 
 const {
   IconBuilder,
@@ -10,18 +11,43 @@ const {
   IconWallet
 } = IconService.default;
 
-const { contract, network, PK, NID, RPC_URL, jarPath } = config;
+const {
+  contract,
+  network,
+  PK_BERLIN,
+  PK_SEPOLIA,
+  NID,
+  RPC_URL,
+  jarPath,
+  solPath
+} = config;
 
 const HTTP_PROVIDER = new HttpProvider(RPC_URL);
 const ICON_SERVICE = new IconService.default(HTTP_PROVIDER);
-const WALLET = IconWallet.loadPrivateKey(PK);
+const WALLET = IconWallet.loadPrivateKey(PK_BERLIN);
 
-function getContractByteCode() {
+function getIconContractByteCode() {
   try {
     return fs.readFileSync(jarPath).toString("hex");
   } catch (e) {
     console.log(e);
     throw new Error("Error reading contract info");
+  }
+}
+
+function getEvmContract() {
+  try {
+    const result = {
+      abi: null,
+      bytecode: null
+    };
+    const contract = JSON.parse(fs.readFileSync(solPath));
+    result.abi = contract.abi;
+    result.bytecode = contract.bytecode;
+    return result;
+  } catch (e) {
+    console.log(e);
+    throw new Error("Error reading EVM contract info");
   }
 }
 
@@ -42,7 +68,7 @@ function getBtpAddress(label, address) {
 
 async function deployContract(params) {
   try {
-    const content = getContractByteCode();
+    const content = getIconContractByteCode();
     const payload = new IconBuilder.DeployTransactionBuilder()
       .contentType("application/java")
       .content(`0x${content}`)

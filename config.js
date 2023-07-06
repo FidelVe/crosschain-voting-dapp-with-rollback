@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { PK } = process.env;
+const { PK_BERLIN, PK_SEPOLIA } = process.env;
 
 // modify this to change the network. Options are localhost, berlin, custom
 const USE_NETWORK = "berlin";
@@ -38,10 +38,12 @@ const config = {
 
 module.exports = {
   ...config,
-  PK: PK,
+  PK_BERLIN: PK_BERLIN,
+  PK_SEPOLIA: PK_SEPOLIA,
   USE_NETWORK: USE_NETWORK,
   RPC_URL: config.rpc[USE_NETWORK],
   NID: config.nid[USE_NETWORK],
   jarPath:
-    "./contract/crosschain-voting-dapp/build/libs/crosschain-voting-dapp-optimized.jar"
+    "./contract/crosschain-voting-dapp/build/libs/crosschain-voting-dapp-optimized.jar",
+  solPath: "./contracts/solidity/build/VotingDapp.json"
 };

@@ -13,7 +13,7 @@ dependencies {
 }
 
 optimizedJar {
-    mainClassName = 'app.CrossChainVoting'
+    mainClassName = 'app.VotingDapp'
 
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from {

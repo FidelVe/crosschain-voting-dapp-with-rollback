@@ -1,19 +1,15 @@
 // Imports
-const lib = require("./lib");
+const { deployIcon, deployEvm } = require("./lib");
 
 async function main() {
   try {
-    const params = lib.getDappDeploymentsParams();
-    console.log("params", params);
+    // deploying EVM contract
+    const evmContractAddress = await deployEvm();
+    console.log("\n# deployed EVM contract address:", evmContractAddress);
 
-    const receipt = await lib.deployContract(params);
-    console.log(receipt);
-
-    const txResult = await lib.getTxResult(receipt);
-    console.log("txResult", txResult);
-
-    // const scoreApi = await lib.getScoreApi(txResult.scoreAddress);
-    // console.log("scoreApi", scoreApi.getList());
+    // deploying ICON contract
+    const iconContractAddress = await deployIcon(evmContractAddress);
+    console.log("\n# deployed ICON contract address:", iconContractAddress);
   } catch (e) {
     console.log("error runninn main", e);
   }

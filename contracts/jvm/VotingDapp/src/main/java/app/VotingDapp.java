@@ -34,7 +34,7 @@ import java.util.Map;
 
 @ScoreClient
 //public class CrossChainVoting implements CallServiceReceiver {
-public class CrossChainVoting {
+public class VotingDapp {
     //    private final XCallProxy xCall;
 //    private final String callSvcBtpAddr;
     private final VarDB<BigInteger> countOfYes = Context.newVarDB("yes", BigInteger.class);
@@ -42,7 +42,7 @@ public class CrossChainVoting {
     private final VarDB<String> destinationBtpAddress = Context.newVarDB("btpAddress", String.class);
     private final VarDB<Address> xcallContractAddress = Context.newVarDB("xcall", Address.class);
 
-    public CrossChainVoting(Address _sourceXCallContract, String _destinationBtpAddress) {
+    public VotingDapp(Address _sourceXCallContract, String _destinationBtpAddress) {
 //        this.xCall = new XCallProxy(_callService);
 //        this.callSvcBtpAddr = xCall.getBtpAddress();
         this.destinationBtpAddress.set(_destinationBtpAddress);

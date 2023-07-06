@@ -1,7 +1,7 @@
 const IconService = require("icon-sdk-js");
 const fs = require("fs");
 const config = require("./config");
-const Web3 = require("web3");
+const { Web3 } = require("web3");
 
 const {
   IconBuilder,
@@ -13,18 +13,31 @@ const {
 
 const {
   contract,
-  network,
+  // network,
   PK_BERLIN,
   PK_SEPOLIA,
   NID,
-  RPC_URL,
+  ICON_RPC_URL,
+  EVM_RPC_URL,
   jarPath,
-  solPath
+  solPath,
+  XCALL_PRIMARY,
+  XCALL_SECONDARY,
+  // NETWORK_LABEL_PRIMARY,
+  NETWORK_LABEL_SECONDARY
 } = config;
 
-const HTTP_PROVIDER = new HttpProvider(RPC_URL);
+const HTTP_PROVIDER = new HttpProvider(ICON_RPC_URL);
 const ICON_SERVICE = new IconService.default(HTTP_PROVIDER);
-const WALLET = IconWallet.loadPrivateKey(PK_BERLIN);
+const ICON_WALLET = IconWallet.loadPrivateKey(PK_BERLIN);
+
+const EVM_SERVICE = new Web3(EVM_RPC_URL);
+// const EVM_SERVICE = new Web3(new Web3.providers.HttpProvider(EVM_RPC_URL));
+const EVM_WALLET = EVM_SERVICE.eth.accounts.privateKeyToAccount(
+  PK_SEPOLIA,
+  true
+);
+EVM_SERVICE.eth.accounts.wallet.add(EVM_WALLET);
 
 function getIconContractByteCode() {
   try {
@@ -51,13 +64,10 @@ function getEvmContract() {
   }
 }
 
-function getDappDeploymentsParams() {
+function getIconDappDeploymentsParams(label, dappContract) {
   const result = {
-    _sourceXCallContract: config.contract.icon.xcall,
-    _destinationBtpAddress: getBtpAddress(
-      network.sepolia.label,
-      contract.sepolia.dapp
-    )
+    _sourceXCallContract: XCALL_PRIMARY,
+    _destinationBtpAddress: getBtpAddress(label, dappContract)
   };
   return result;
 }
@@ -73,7 +83,7 @@ async function deployContract(params) {
       .contentType("application/java")
       .content(`0x${content}`)
       .params(params)
-      .from(WALLET.getAddress())
+      .from(ICON_WALLET.getAddress())
       .to(contract.icon.chain)
       .nid(NID)
       .version(3)
@@ -81,7 +91,7 @@ async function deployContract(params) {
       .stepLimit(IconConverter.toBigNumber(2500000000))
       .build();
 
-    const signedTx = new SignedTransaction(payload, WALLET);
+    const signedTx = new SignedTransaction(payload, ICON_WALLET);
     return await ICON_SERVICE.sendTransaction(signedTx).execute();
   } catch (e) {
     console.log("error deploying contract", e);
@@ -116,12 +126,73 @@ async function getTxResult(txHash) {
   }
 }
 
+async function deployEvm() {
+  try {
+    console.log("\n # Deploying contract on EVM chain...");
+    const { abi, bytecode } = getEvmContract();
+    const contract = new EVM_SERVICE.eth.Contract(abi);
+    // contract.options.data = bytecode;
+    const deployTx = contract.deploy({
+      data: bytecode,
+      arguments: [XCALL_SECONDARY]
+    });
+    const deployedContract = await deployTx
+      .send({
+        from: EVM_WALLET.address,
+        gas: await deployTx.estimateGas()
+      })
+      .once("transactionHash", txHash => {
+        console.log("Mining deployment transaction...");
+        console.log("txHash", txHash);
+      });
+
+    console.log(
+      "\n# Deployed contract address:",
+      deployedContract.options.address
+    );
+    return deployedContract.options.address;
+  } catch (e) {
+    console.log(e);
+    throw new Error("Error deploying contract on EVM chain");
+  }
+}
+
+async function deployIcon(evmDappContract) {
+  try {
+    console.log("\n # Deploying contract on ICON chain...");
+    const params = getIconDappDeploymentsParams(
+      NETWORK_LABEL_SECONDARY,
+      evmDappContract
+    );
+    console.log("\n# Params for contract deployment on ICON:", params);
+
+    const receipt = await deployContract(params);
+    console.log("\n# Receipt for contract deployment on ICON:", receipt);
+
+    const txResult = await getTxResult(receipt);
+    console.log("\n# TxResult for contract deployment on ICON:", txResult);
+
+    const scoreAddress = txResult["scoreAddress"];
+    const scoreApi = await getScoreApi(scoreAddress);
+    const abi = scoreApi.getList();
+    console.log(
+      "\n# ScoreApi for contract deployment on ICON:",
+      JSON.stringify(abi)
+    );
+    return scoreAddress;
+  } catch (e) {
+    console.log(e);
+    throw new Error("Error deploying contract ICON chain");
+  }
+}
 const lib = {
   deployContract,
   getTxResult,
   config,
   getScoreApi,
-  getDappDeploymentsParams
+  getIconDappDeploymentsParams,
+  deployIcon,
+  deployEvm
 };
 
 module.exports = lib;

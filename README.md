@@ -1,6 +1,6 @@
 # Crosschain voting dapp
 
-This is cross chain DApp to showcase ICON XCall, it consists of a set of smart contracts deployed on Berlin (ICON) and Sepolia (Ethereum) to cast votes on the ICON chain and it will keep a ledger of the votes on both chains.
+The following is a cross chain DApp to showcase ICON XCall, it consists of a set of smart contracts deployed on Berlin (ICON) and Sepolia (Ethereum) to cast votes on the ICON chain and it will keep a ledger of the votes on both chains.
 
 ## Setup
 

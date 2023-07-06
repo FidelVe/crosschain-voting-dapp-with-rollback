@@ -6,8 +6,12 @@ import "./interfaces/ICallService.sol";
 import "./interfaces/ICallServiceReceiver.sol";
 
 contract VotingDapp is ICallServiceReceiver {
-  uint countOfYes;
-  uint countOfNo;
+  struct Votes {
+    uint256 countOfYes;
+    uint256 countOfNo;
+  }
+
+  Votes public votes;
   address private callSvc;
   // string private callSvcBtpAddr;
   uint256 private lastId;
@@ -19,10 +23,22 @@ contract VotingDapp is ICallServiceReceiver {
   mapping(uint256 => RollbackData) private rollbacks;
 
   constructor(address _callService) {
-    countOfYes = 0;
-    countOfNo = 0;
+    votes.countOfYes = 0;
+    votes.countOfNo = 0;
     callSvc = _callService;
     // callSvcBtpAddr = ICallService(callSvc).getBtpAddress();
+  }
+
+  function getVotes() public view returns (uint256, uint256) {
+    return (votes.countOfYes, votes.countOfNo);
+  }
+
+  function addYesVote() internal {
+    votes.countOfYes++;
+  }
+
+  function addNoVote() internal {
+    votes.countOfNo++;
   }
 
   // function handleCallMessage(
@@ -32,7 +48,10 @@ contract VotingDapp is ICallServiceReceiver {
   // }
   modifier onlyCallService() {
       require(msg.sender == callSvc, "OnlyCallService");
-      _;
+  }
+
+  function getCallService() public view returns (address) {
+      return callSvc;
   }
 
   // function initialize(
@@ -93,6 +112,11 @@ contract VotingDapp is ICallServiceReceiver {
           revert("revertFromDApp");
       }
       emit MessageReceived(_from, _data);
+      if (compareTo("voteYes", msgData)) {
+          addYesVote();
+      } else if (compareTo("voteNo", msgData)) {
+          addNoVote();
+      }
       // if (compareTo(_from, callSvcBtpAddr)) {
           // handle rollback data here
           // In this example, just compare it with the stored one.

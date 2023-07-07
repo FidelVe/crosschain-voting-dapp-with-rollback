@@ -12,7 +12,8 @@ const {
   parseCallMessageSentEvent,
   filterCallMessageEventEvm,
   waitEventEVM,
-  executeCallEvm
+  executeCallEvm,
+  filterCallExecutedEventEvm
   // checkCallExecutedEventEvm
 } = require("./lib");
 
@@ -77,24 +78,27 @@ async function tests(contracts) {
 
     // wait for call message event evm
     const eventsEvm = await waitEventEVM(callMessageEventEvmFilters);
-    const messageId = eventsEvm[0].args._from;
-    const sn = eventsEvm[0].args._sn;
+    const messageId = eventsEvm[0].args._reqId;
+    const data = eventsEvm[0].args._data;
     console.log("\n# events params:");
-    console.log("_from:", eventsEvm[0].args._from);
-    console.log("_to:", eventsEvm[0].args._to);
-    console.log("_ReqId:", messageId);
-    console.log("_sn:", sn);
+    console.log(eventsEvm[0].args);
 
     // invoke execute call on destination chain
     console.log("\n# invoking execute call on destination chain");
-    const executeCallTxHash = await executeCallEvm(messageId);
+    const executeCallTxHash = await executeCallEvm(messageId, data);
     console.log("\n# execute call tx hash:", executeCallTxHash);
 
-    // check callExecuted event
-    // console.log("\n# waiting for callExecuted event on evm chain...");
-    // const callExecutedEvent = await checkCallExecutedEventEvm(
-    //   executeCallTxHash
-    // );
+    // filter call message event evm
+    const callExecutedEventEvmFilters = filterCallExecutedEventEvm(messageId);
+    console.log(
+      "\n# call executed event evm filters:",
+      callExecutedEventEvmFilters
+    );
+
+    // wait for call executed event evm
+    const eventsEvm2 = await waitEventEVM(callExecutedEventEvmFilters);
+    console.log("\n# events params:");
+    console.log(eventsEvm2[0].args);
     // vote no from icon
     // const voteNoFromIconResult = await voteNoFromIcon(contracts.primary);
     // console.log("\n# vote no from icon result:", voteNoFromIconResult);

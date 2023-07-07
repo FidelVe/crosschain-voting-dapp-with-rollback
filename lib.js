@@ -197,6 +197,13 @@ async function getTxResult(txHash) {
     }
   }
 }
+function filterCallExecutedEventEvm(id) {
+  const xcallContract = getXcallContractEVM();
+  const callMessageFilters = xcallContract.filters.CallExecuted(id);
+  console.log("xcall contract filters");
+  console.log(callMessageFilters);
+  return callMessageFilters;
+}
 
 function filterCallMessageEventEvm(iconDappAddress, evmDappAddress, sn) {
   const btpAddressSource = getBtpAddress(
@@ -259,10 +266,10 @@ async function waitEventEVM(filterCM) {
   }
 }
 
-async function executeCallEvm(id) {
+async function executeCallEvm(id, data) {
   try {
     const contract = getXcallContractEVM();
-    return await sendSignedTxEVM(contract, "executeCall", id);
+    return await sendSignedTxEVM(contract, "executeCall", id, data);
   } catch (e) {
     console.log(e);
     throw new Error("Error executing call");
@@ -273,9 +280,7 @@ async function sendSignedTxEVM(contract, method, ...args) {
   // const signer = new ethers.wallet(PK_SEPOLIA, EVM_RPC_URL);
   // const gas = await contract.estimateGas[method](...args);
   // conse useGas = gas.toNumber() + 100000000;
-  const txParams = {
-    gasLimit: 200000000
-  };
+  const txParams = { gasLimit: 15000000 };
 
   const tx = await contract[method](...args, txParams);
   const receipt = await tx.wait(1);
@@ -443,7 +448,8 @@ const lib = {
   parseCallMessageSentEvent,
   filterCallMessageEventEvm,
   waitEventEVM,
-  executeCallEvm
+  executeCallEvm,
+  filterCallExecutedEventEvm
 };
 
 module.exports = lib;

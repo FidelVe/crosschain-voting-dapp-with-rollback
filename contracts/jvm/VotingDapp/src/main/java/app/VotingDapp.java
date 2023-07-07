@@ -54,7 +54,7 @@ public class VotingDapp {
     private BigInteger _sendCallMessage(byte[] _data, @Optional byte[] _rollback) {
         Address xcallSourceAddress = this.xcallContractAddress.get();
         String _to = this.destinationBtpAddress.get();
-        return Context.call(BigInteger.class, xcallSourceAddress, "sendCallMessage", _to, _data, _rollback);
+        return Context.call(BigInteger.class, Context.getValue(), xcallSourceAddress, "sendCallMessage", _to, _data, _rollback);
     }
 
     @Payable

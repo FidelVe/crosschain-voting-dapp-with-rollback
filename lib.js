@@ -2,6 +2,8 @@ const IconService = require("icon-sdk-js");
 const fs = require("fs");
 const config = require("./config");
 const { Web3 } = require("web3");
+const { ethers } = require("ethers");
+const { BigNumber } = ethers;
 
 const {
   IconBuilder,
@@ -11,6 +13,7 @@ const {
   IconWallet
 } = IconService.default;
 
+const { CallTransactionBuilder, CallBuilder } = IconBuilder;
 const {
   contract,
   // network,
@@ -23,9 +26,10 @@ const {
   solPath,
   XCALL_PRIMARY,
   XCALL_SECONDARY,
-  // NETWORK_LABEL_PRIMARY,
+  NETWORK_LABEL_PRIMARY,
   NETWORK_LABEL_SECONDARY,
-  deploymentsPath
+  deploymentsPath,
+  xcallAbiPath
 } = config;
 
 const HTTP_PROVIDER = new HttpProvider(ICON_RPC_URL);
@@ -79,13 +83,13 @@ function getDeployments() {
   }
 }
 
-function getEvmContract() {
+function getEvmContract(abiPath) {
   try {
     const result = {
       abi: null,
       bytecode: null
     };
-    const contract = JSON.parse(fs.readFileSync(solPath));
+    const contract = JSON.parse(fs.readFileSync(abiPath));
     result.abi = contract.abi;
     result.bytecode = contract.bytecode;
     return result;
@@ -93,6 +97,14 @@ function getEvmContract() {
     console.log(e);
     throw new Error("Error reading EVM contract info");
   }
+}
+
+function getDappContract() {
+  return getEvmContract(solPath);
+}
+
+function getXcallContract() {
+  return getEvmContract(xcallAbiPath);
 }
 
 function getIconDappDeploymentsParams(label, dappContract) {
@@ -139,6 +151,35 @@ async function getScoreApi(contract) {
   }
 }
 
+async function filterEventICON(eventlogs, sig, address) {
+  return eventlogs.filter(event => {
+    return (
+      event.indexed &&
+      event.indexed[0] === sig &&
+      (!address || address === event.scoreAddress)
+    );
+  });
+}
+
+async function filterCallMessageSentEvent(eventlogs) {
+  return filterEventICON(
+    eventlogs,
+    "CallMessageSent(Address,str,int,int)",
+    XCALL_PRIMARY
+  );
+}
+
+async function parseCallMessageSentEvent(event) {
+  const indexed = event[0].indexed || [];
+  const data = event[0].data || [];
+  return {
+    _from: indexed[1],
+    _to: indexed[2],
+    _sn: BigNumber.from(indexed[3]),
+    _nsn: BigNumber.from(data[0])
+  };
+}
+
 async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -157,10 +198,155 @@ async function getTxResult(txHash) {
   }
 }
 
+function filterCallMessageEventEvm(iconDappAddress, evmDappAddress, sn) {
+  const btpAddressSource = getBtpAddress(
+    NETWORK_LABEL_PRIMARY,
+    iconDappAddress
+  );
+  const xcallContract = getXcallContractEVM();
+  const callMessageFilters = xcallContract.filters.CallMessage(
+    btpAddressSource,
+    evmDappAddress,
+    sn
+  );
+  console.log("xcall contract filters");
+  console.log(callMessageFilters);
+  console.log(btpAddressSource);
+  console.log(evmDappAddress);
+  return callMessageFilters;
+}
+
+function getXcallContractEVM() {
+  try {
+    const { abi } = getXcallContract();
+    return getContractObjectEVM(abi, XCALL_SECONDARY);
+  } catch (e) {
+    console.log(e);
+    throw new Error("Error getting Xcall contract");
+  }
+}
+
+function getContractObjectEVM(abi, address) {
+  try {
+    const provider = new ethers.providers.JsonRpcProvider(EVM_RPC_URL);
+    const signer = new ethers.Wallet(PK_SEPOLIA, provider);
+    const contractObject = new ethers.Contract(address, abi, signer);
+    return contractObject;
+  } catch (e) {
+    console.log(e);
+    throw new Error("Error getting contract object");
+  }
+}
+
+async function waitEventEVM(filterCM) {
+  const contract = getXcallContractEVM();
+  let height = await contract.provider.getBlockNumber();
+  let next = height + 1;
+  console.log("block height", height);
+  while (true) {
+    if (height == next) {
+      await sleep(1000);
+      next = (await contract.provider.getBlockNumber()) + 1;
+      continue;
+    }
+    for (; height < next; height++) {
+      console.log(`waitEventEvmChain: ${height} -> ${next}`);
+      const events = await contract.queryFilter(filterCM, height);
+      if (events.length > 0) {
+        return events;
+      }
+    }
+  }
+}
+
+async function executeCallEvm(id) {
+  try {
+    const contract = getXcallContractEVM();
+    return await sendSignedTxEVM(contract, "executeCall", id);
+  } catch (e) {
+    console.log(e);
+    throw new Error("Error executing call");
+  }
+}
+
+async function sendSignedTxEVM(contract, method, ...args) {
+  // const signer = new ethers.wallet(PK_SEPOLIA, EVM_RPC_URL);
+  // const gas = await contract.estimateGas[method](...args);
+  // conse useGas = gas.toNumber() + 100000000;
+  const txParams = {
+    gasLimit: 200000000
+  };
+
+  const tx = await contract[method](...args, txParams);
+  const receipt = await tx.wait(1);
+  return receipt;
+}
+
+async function callDappContractMethod(method, contract, useRollback = false) {
+  try {
+    const fee = await getFeeFromIcon(useRollback);
+
+    const txObj = new CallTransactionBuilder()
+      .from(ICON_WALLET.getAddress())
+      .to(contract)
+      .stepLimit(IconConverter.toBigNumber(20000000))
+      .nid(IconConverter.toBigNumber(NID))
+      .nonce(IconConverter.toBigNumber(1))
+      .version(IconConverter.toBigNumber(3))
+      .timestamp(new Date().getTime() * 1000)
+      .method(method)
+      .value(fee)
+      .build();
+
+    const signedTx = new SignedTransaction(txObj, ICON_WALLET);
+    return await ICON_SERVICE.sendTransaction(signedTx).execute();
+  } catch (e) {
+    console.log(e);
+    throw new Error("Error calling contract method");
+  }
+}
+async function voteYesFromIcon(contract, useRollback = false) {
+  try {
+    return await callDappContractMethod("voteYes", contract, useRollback);
+  } catch (e) {
+    console.log(e);
+    throw new Error("Error voting yes");
+  }
+}
+
+async function voteNoFromIcon(contract, useRollback = false) {
+  try {
+    return await callDappContractMethod("voteNo", contract, useRollback);
+  } catch (e) {
+    console.log(e);
+    throw new Error("Error voting no");
+  }
+}
+
+async function getFeeFromIcon(useRollback = false) {
+  try {
+    const params = {
+      _net: NETWORK_LABEL_SECONDARY,
+      _rollback: useRollback ? "0x1" : "0x0"
+    };
+
+    const txObj = new CallBuilder()
+      .to(XCALL_PRIMARY)
+      .method("getFee")
+      .params(params)
+      .build();
+
+    return await ICON_SERVICE.call(txObj).execute();
+  } catch (e) {
+    console.log("error getting fee", e);
+    throw new Error("Error getting fee");
+  }
+}
+
 async function deployEvm() {
   try {
     console.log("\n # Deploying contract on EVM chain...");
-    const { abi, bytecode } = getEvmContract();
+    const { abi, bytecode } = getDappContract();
     const contract = new EVM_SERVICE.eth.Contract(abi);
     // contract.options.data = bytecode;
     const deployTx = contract.deploy({
@@ -224,6 +410,7 @@ function strToHex(str) {
   }
   return "0x" + hex;
 }
+
 function strToHexPadded(str) {
   var hex = "";
   for (var i = 0; i < str.length; i++) {
@@ -249,7 +436,14 @@ const lib = {
   saveDeployments,
   getDeployments,
   strToHex,
-  strToHexPadded
+  strToHexPadded,
+  voteYesFromIcon,
+  voteNoFromIcon,
+  filterCallMessageSentEvent,
+  parseCallMessageSentEvent,
+  filterCallMessageEventEvm,
+  waitEventEVM,
+  executeCallEvm
 };
 
 module.exports = lib;

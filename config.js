@@ -21,8 +21,8 @@ const config = {
       xcall: "cxf4958b242a264fc11d7d8d95f79035e35b21c1bb"
     },
     sepolia: {
-      dapp: "0x52D0A13ABD0B949FF840de7F953545BBB9259A9c",
-      xcall: "0x232dd167F4141d4313C29b5ea264aa98f9c339d4"
+      dapp: "0x597F73bfb3124B6145151E7a8A30b781C41FF2B0",
+      xcall: "0x694C1f5Fb4b81e730428490a1cE3dE6e32428637"
     }
   },
   nid: {
@@ -53,6 +53,7 @@ module.exports = {
   NID: config.nid[NETWORK_PRIMARY],
   jarPath: "./contracts/jvm/VotingDapp/build/libs/VotingDapp-optimized.jar",
   solPath: "./contracts/solidity/build/VotingDapp.json",
+  xcallAbiPath: "./xcallAbi.json",
   XCALL_PRIMARY: config.contract[NETWORK_PRIMARY].xcall,
   XCALL_SECONDARY: config.contract[NETWORK_SECONDARY].xcall,
   NETWORK_LABEL_PRIMARY: config.network[NETWORK_PRIMARY].label,

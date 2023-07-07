@@ -56,3 +56,4 @@ contract/scripts
 *.swp*
 *foo*
 deployments.json
+*.bkp

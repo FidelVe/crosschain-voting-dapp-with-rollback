@@ -57,3 +57,4 @@ contract/scripts
 *foo*
 deployments.json
 *.bkp
+local

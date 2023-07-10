@@ -6,17 +6,19 @@ const {
   getDeployments,
   saveDeployments,
   voteYesFromIcon,
-  // voteNoFromIcon,
   getTxResult,
   filterCallMessageSentEvent,
   parseCallMessageSentEvent,
   filterCallMessageEventEvm,
   waitEventEVM,
   executeCallEvm,
-  filterCallExecutedEventEvm
-  // checkCallExecutedEventEvm
+  filterCallExecutedEventEvm,
+  getVotesFromEVM
 } = require("./lib");
 
+/*
+ * Deploy script
+ */
 async function deploy() {
   try {
     const contracts = {
@@ -40,6 +42,13 @@ async function deploy() {
   }
 }
 
+/*
+ * Tests
+ * @param {Object} contracts
+ * @param {string} contracts.primary - ICON contract address
+ * @param {string} contracts.secondary - EVM contract address
+ * @returns {Promise<void>}
+ */
 async function tests(contracts) {
   try {
     // vote yes from icon
@@ -48,7 +57,7 @@ async function tests(contracts) {
 
     // get tx result
     const txResult = await getTxResult(voteYesFromIconResult);
-    console.log("\n# tx result for calling voteYes:", txResult);
+    console.log("\n# tx result for calling voteYes:", txResult.txHash);
 
     // filter call message sent event
     const callMessageSentEvent = await filterCallMessageSentEvent(
@@ -81,32 +90,37 @@ async function tests(contracts) {
     const messageId = eventsEvm[0].args._reqId;
     const data = eventsEvm[0].args._data;
     console.log("\n# events params:");
-    console.log(eventsEvm[0].args);
+    console.log(JSON.stringify(eventsEvm[0].args));
 
     // invoke execute call on destination chain
     console.log("\n# invoking execute call on destination chain");
     const executeCallTxHash = await executeCallEvm(messageId, data);
-    console.log("\n# execute call tx hash:", executeCallTxHash);
+    console.log("\n# execute call tx hash:", executeCallTxHash.transactionHash);
 
     // filter call message event evm
     const callExecutedEventEvmFilters = filterCallExecutedEventEvm(messageId);
     console.log(
-      "\n# call executed event evm filters:",
+      "\n# callExecuted event evm filters:",
       callExecutedEventEvmFilters
     );
 
     // wait for call executed event evm
     const eventsEvm2 = await waitEventEVM(callExecutedEventEvmFilters);
     console.log("\n# events params:");
-    console.log(eventsEvm2[0].args);
-    // vote no from icon
-    // const voteNoFromIconResult = await voteNoFromIcon(contracts.primary);
-    // console.log("\n# vote no from icon result:", voteNoFromIconResult);
+    console.log(JSON.stringify(eventsEvm2[0].args));
+
+    // check votes from destination chain
+    const votesFromEVM = await getVotesFromEVM(contracts.secondary);
+    console.log("\n# votes from EVM:", votesFromEVM);
   } catch (e) {
     console.log("error running tests", e);
   }
 }
 
+/*
+ * Main
+ * @returns {Promise<void>}
+ */
 async function main() {
   try {
     // check if contracts have been deployed already

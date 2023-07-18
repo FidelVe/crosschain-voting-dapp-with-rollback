@@ -1,8 +1,10 @@
 const VotingDapp = artifacts.require("VotingDapp.sol");
-const config = require("../../../config");
+const config = require("../../../utils/config");
 
 module.exports = (deployer, network, accounts) => {
-  // const xcall = config.contract.sepolia.xcall;
+  console.log("> Deploying VotingDapp contract to network: " + network);
   const deployerAccount = accounts[0];
-  deployer.deploy(VotingDapp, deployerAccount);
+  console.log("> Deployer account: " + deployerAccount);
+  deployer.deploy(VotingDapp, deployerAccount, 10);
+  console.log("> VotingDapp contract deployed!\n");
 };

@@ -14,7 +14,7 @@ const {
   executeCallEvm,
   filterCallExecutedEventEvm,
   getVotesFromEVM
-} = require("./lib");
+} = require("./utils/lib");
 
 /*
  * Deploy script

@@ -39,16 +39,29 @@ function getIconContractByteCode() {
  */
 function isDeployed() {
   try {
-    if (!fs.existsSync(deploymentsPath)) {
-      return false;
-    }
-    return true;
+    fileExists(deploymentsPath);
   } catch (e) {
     console.log(e);
     throw new Error("Error checking deployments");
   }
 }
 
+/*
+ * fileExists- checks if the file exists
+ * @returns {boolean} - true if the file exists, false otherwise
+ * @throws {Error} - if there is an error checking the file
+ */
+function fileExists(path) {
+  try {
+    if (fs.existsSync(path)) {
+      return true;
+    }
+    return false;
+  } catch (e) {
+    console.log(e);
+    throw new Error(`Error checking file ${path}`);
+  }
+}
 /*
  * saveDeployments - saves the deployments
  * @param {object} deployments - the deployments to save
@@ -226,7 +239,7 @@ function isValidEVMAddress(address) {
   return address && address.length === 42 && address.startsWith("0x");
 }
 
-const lib = {
+const utils = {
   // methods
   getIconContractByteCode,
   isDeployed,
@@ -243,6 +256,7 @@ const lib = {
   strToHex,
   strToHexPadded,
   isValidEVMAddress,
+  fileExists,
   // config values
   contract,
   PK_BERLIN,
@@ -260,4 +274,4 @@ const lib = {
   xcallAbiPath
 };
 
-module.exports = lib;
+module.exports = utils;

@@ -14,7 +14,6 @@ dependencies {
 
 optimizedJar {
     mainClassName = 'app.VotingDapp'
-    enableDebug = true
 
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }

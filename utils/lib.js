@@ -1,5 +1,5 @@
 const IconService = require("icon-sdk-js");
-const config = require("./config");
+const utils = require("./utils");
 const { Web3 } = require("web3");
 const { ethers } = require("ethers");
 const { BigNumber } = ethers;
@@ -34,8 +34,10 @@ const {
   filterCallMessageSentEvent,
   sleep,
   strToHex,
-  strToHexPadded
-} = config;
+  strToHexPadded,
+  fileExists
+} = utils;
+
 const {
   IconBuilder,
   IconConverter,
@@ -73,6 +75,14 @@ function validateConfig() {
       (typeof PK_SEPOLIA !== "string" && PK_SEPOLIA.slice(0, 2) !== "0x")
     ) {
       throw new Error("PK_SEPOLIA is not set");
+    }
+
+    if (!fileExists(jarPath)) {
+      throw new Error("compile java contract not found");
+    }
+
+    if (!fileExists(solPath)) {
+      throw new Error("compile solidity contract not found");
     }
   } catch (e) {
     console.log(e.message);
@@ -507,7 +517,6 @@ const lib = {
   // methods
   deployIconContract,
   getTxResult,
-  config,
   getScoreApi,
   deployIcon,
   deployEvm,

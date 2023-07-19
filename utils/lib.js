@@ -44,6 +44,9 @@ const {
   IconWallet
 } = IconService.default;
 
+// validate configs
+validateConfig();
+
 const { CallTransactionBuilder, CallBuilder } = IconBuilder;
 
 const HTTP_PROVIDER = new HttpProvider(ICON_RPC_URL);
@@ -56,6 +59,26 @@ const EVM_WALLET = EVM_SERVICE.eth.accounts.privateKeyToAccount(
   true
 );
 EVM_SERVICE.eth.accounts.wallet.add(EVM_WALLET);
+
+/*
+ * Validate the config values
+ * @throws {Error} - if there is an error validating the config values
+ */
+function validateConfig() {
+  try {
+    if (PK_BERLIN == null) {
+      throw new Error("PK_BERLIN is not set");
+    } else if (
+      PK_SEPOLIA == null ||
+      (typeof PK_SEPOLIA !== "string" && PK_SEPOLIA.slice(0, 2) !== "0x")
+    ) {
+      throw new Error("PK_SEPOLIA is not set");
+    }
+  } catch (e) {
+    console.log(e.message);
+    throw new Error("Error validating config");
+  }
+}
 
 /*
  * deployIconContract - deploys the contract on ICON
@@ -396,7 +419,7 @@ async function deployEvm() {
     // contract.options.data = bytecode;
     const deployTx = contract.deploy({
       data: bytecode,
-      arguments: [XCALL_SECONDARY]
+      arguments: [XCALL_SECONDARY, 10]
     });
     const deployedContract = await deployTx
       .send({

@@ -33,6 +33,10 @@ public class VotingDapp {
         this.xcallContractAddress.set(_sourceXCallContract);
         this.countOfNo.set(BigInteger.ZERO);
         this.countOfYes.set(BigInteger.ZERO);
+        this.payloadYes.set(PAYLOAD_YES);
+        this.payloadNo.set(PAYLOAD_NO);
+        this.rollbackYes.set(ROLLBACK_YES);
+        this.rollbackNo.set(ROLLBACK_NO);
     }
 
     private BigInteger _sendCallMessage(byte[] _data, @Optional byte[] _rollback) {

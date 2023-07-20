@@ -334,9 +334,10 @@ async function sendSignedTxEVM(contract, method, ...args) {
  * @returns {object} - the transaction receipt
  * @throws {Error} - if there is an error calling the dapp contract method
  */
-async function callDappContractMethod(method, contract, useRollback = false) {
+async function callDappContractMethod(method, contract, useRollback = true) {
   try {
     const fee = await getFeeFromIcon(useRollback);
+    // console.log("# fee", fee);
 
     const txObj = new CallTransactionBuilder()
       .from(ICON_WALLET.getAddress())
@@ -365,7 +366,7 @@ async function callDappContractMethod(method, contract, useRollback = false) {
  * @returns {object} - the transaction receipt
  * @throws {Error} - if there is an error voting yes
  */
-async function voteYesFromIcon(contract, useRollback = false) {
+async function voteYesFromIcon(contract, useRollback = true) {
   try {
     return await callDappContractMethod("voteYes", contract, useRollback);
   } catch (e) {
@@ -381,7 +382,7 @@ async function voteYesFromIcon(contract, useRollback = false) {
  * @returns {object} - the transaction receipt
  * @throws {Error} - if there is an error voting no
  */
-async function voteNoFromIcon(contract, useRollback = false) {
+async function voteNoFromIcon(contract, useRollback = true) {
   try {
     return await callDappContractMethod("voteNo", contract, useRollback);
   } catch (e) {
@@ -396,12 +397,13 @@ async function voteNoFromIcon(contract, useRollback = false) {
  * @returns {object} - the transaction receipt
  * @throws {Error} - if there is an error getting the fee
  */
-async function getFeeFromIcon(useRollback = false) {
+async function getFeeFromIcon(useRollback = true) {
   try {
     const params = {
       _net: NETWORK_LABEL_SECONDARY,
       _rollback: useRollback ? "0x1" : "0x0"
     };
+    // console.log("# params", params);
 
     const txObj = new CallBuilder()
       .to(XCALL_PRIMARY)

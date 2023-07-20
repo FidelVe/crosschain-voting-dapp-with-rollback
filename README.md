@@ -31,6 +31,14 @@ cd contracts/jvm/
 ./gradlew op
 ```
 
+## Run Tests
+
+To run tests for the Java contract move into the `./contracts/jvm/` folder and run the gradle test command.
+```
+cd contracts/jvm/
+./gradlew clean test
+```
+
 ## Run main script
 
 Once you had compiled the solidity and java contracts you can run the main script with the following command

@@ -39,7 +39,7 @@ function getIconContractByteCode() {
  */
 function isDeployed() {
   try {
-    fileExists(deploymentsPath);
+    return fileExists(deploymentsPath);
   } catch (e) {
     console.log(e);
     throw new Error("Error checking deployments");

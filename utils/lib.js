@@ -217,6 +217,17 @@ async function getVotesFromEVM(contractAddress) {
 }
 
 /*
+ * getVotesCapFromEVM - gets the votes cap from the EVM chain
+ * @param {string} contractAddress - the address of the contract
+ * @returns {object} - the votes cap
+ * @throws {Error} - if there is an error getting the votes cap
+ */
+async function getVotesCapFromEVM(contractAddress) {
+  const contractObject = getDappContractObject(contractAddress);
+  return await contractObject.getVotesCap();
+}
+
+/*
  * getDappContractObject - gets the dapp contract object
  * @param {string} contractAddress - the address of the contract
  * @returns {object} - the dapp contract object
@@ -529,7 +540,9 @@ const lib = {
   waitEventEVM,
   executeCallEvm,
   filterCallExecutedEventEvm,
-  getVotesFromEVM
+  getVotesFromEVM,
+  getVotesCapFromEVM,
+  BigNumber
 };
 
 module.exports = lib;

@@ -13,7 +13,9 @@ const {
   waitEventEVM,
   executeCallEvm,
   filterCallExecutedEventEvm,
-  getVotesFromEVM
+  getVotesFromEVM,
+  getVotesCapFromEVM
+  // BigNumber
 } = require("./utils/lib");
 
 /*
@@ -49,7 +51,7 @@ async function deploy() {
  * @param {string} contracts.secondary - EVM contract address
  * @returns {Promise<void>}
  */
-async function tests(contracts) {
+async function tests(contracts, rollback = false) {
   try {
     // vote yes from icon
     const voteYesFromIconResult = await voteYesFromIcon(contracts.primary);
@@ -109,9 +111,17 @@ async function tests(contracts) {
     console.log("\n# events params:");
     console.log(JSON.stringify(eventsEvm2[0].args));
 
-    // check votes from destination chain
-    const votesFromEVM = await getVotesFromEVM(contracts.secondary);
-    console.log("\n# votes from EVM:", votesFromEVM);
+    if (!rollback) {
+      // check votes from destination chain
+      // const votesFromEVM = await getVotesFromEVM(contracts.secondary);
+      // console.log("\n# votes from EVM:", votesFromEVM);
+    } else {
+      // execute logic with rollback because current votes is equal or grater than votes cap
+      // fetch ResponseMessage event on origin chain
+      // fetch RollbackMessage event on origin chain
+      // call the payable method executeRollback on the xcall contract of the origin chain
+      // fetch RollbackExecuted event on origin chain
+    }
   } catch (e) {
     console.log("error running tests", e);
   }
@@ -136,7 +146,24 @@ async function main() {
 
     if (contracts !== null) {
       console.log("\n# deployed contracts:", contracts);
-      await tests(contracts);
+
+      // check votes ledger on destination chain
+      const votesFromEVM = await getVotesFromEVM(contracts.secondary);
+      const votesCap = await getVotesCapFromEVM(contracts.secondary);
+      const votesCapParsed = votesCap.toString();
+      console.log("\n# votes cap from EVM:", votesCapParsed);
+
+      const sum = votesFromEVM[0].add(votesFromEVM[1]).toString();
+      console.log("\n# votes from EVM:", votesFromEVM);
+      console.log("\n# sum of votes from EVM:", sum);
+
+      for (let i = Number(sum); i < Number(votesCapParsed); i++) {
+        // vote until votes cap is reached
+        await tests(contracts);
+      }
+
+      // execute logic with rollback because current votes is equal or grater than votes cap
+      await tests(contracts, true);
     }
   } catch (e) {
     console.log("error running main", e);

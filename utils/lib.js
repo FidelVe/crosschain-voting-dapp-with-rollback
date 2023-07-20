@@ -172,15 +172,202 @@ async function getTxResult(txHash) {
 }
 
 /*
+ * callDappContractMethod - calls the dapp contract method
+ * @param {string} method - the method to call
+ * @param {string} contract - the address of the contract
+ * @param {boolean} useRollback - whether to use rollback
+ * @returns {object} - the transaction receipt
+ * @throws {Error} - if there is an error calling the dapp contract method
+ */
+async function callDappContractMethod(method, contract, useRollback = true) {
+  try {
+    const fee = await getFeeFromIcon(useRollback);
+    // console.log("# fee", fee);
+
+    const txObj = new CallTransactionBuilder()
+      .from(ICON_WALLET.getAddress())
+      .to(contract)
+      .stepLimit(IconConverter.toBigNumber(20000000))
+      .nid(IconConverter.toBigNumber(NID))
+      .nonce(IconConverter.toBigNumber(1))
+      .version(IconConverter.toBigNumber(3))
+      .timestamp(new Date().getTime() * 1000)
+      .method(method)
+      .value(fee)
+      .build();
+
+    const signedTx = new SignedTransaction(txObj, ICON_WALLET);
+    return await ICON_SERVICE.sendTransaction(signedTx).execute();
+  } catch (e) {
+    console.log(e);
+    throw new Error("Error calling contract method");
+  }
+}
+
+/*
+ * voteYesFromIcon - calls the voteYes method of the dapp contract
+ * @param {string} contract - the address of the contract
+ * @param {boolean} useRollback - whether to use rollback
+ * @returns {object} - the transaction receipt
+ * @throws {Error} - if there is an error voting yes
+ */
+async function voteYesFromIcon(contract, useRollback = true) {
+  try {
+    return await callDappContractMethod("voteYes", contract, useRollback);
+  } catch (e) {
+    console.log(e);
+    throw new Error("Error voting yes");
+  }
+}
+
+/*
+ * voteNoFromIcon - calls the voteNo method of the dapp contract
+ * @param {string} contract - the address of the contract
+ * @param {boolean} useRollback - whether to use rollback
+ * @returns {object} - the transaction receipt
+ * @throws {Error} - if there is an error voting no
+ */
+async function voteNoFromIcon(contract, useRollback = true) {
+  try {
+    return await callDappContractMethod("voteNo", contract, useRollback);
+  } catch (e) {
+    console.log(e);
+    throw new Error("Error voting no");
+  }
+}
+
+/*
+ * getFeeFromIcon - calls the getFee method of the xcall contract
+ * @param {boolean} useRollback - whether to use rollback
+ * @returns {object} - the transaction receipt
+ * @throws {Error} - if there is an error getting the fee
+ */
+async function getFeeFromIcon(useRollback = true) {
+  try {
+    const params = {
+      _net: NETWORK_LABEL_SECONDARY,
+      _rollback: useRollback ? "0x1" : "0x0"
+    };
+    // console.log("# params", params);
+
+    const txObj = new CallBuilder()
+      .to(XCALL_PRIMARY)
+      .method("getFee")
+      .params(params)
+      .build();
+
+    return await ICON_SERVICE.call(txObj).execute();
+  } catch (e) {
+    console.log("error getting fee", e);
+    throw new Error("Error getting fee");
+  }
+}
+
+/*
+ * deployIcon - deploys the dapp contract on the ICON chain
+ * @param {string} evmDappContract - the address of the EVM dapp contract
+ * @returns {string} - the address of the deployed contract
+ * @throws {Error} - if there is an error deploying the contract
+ */
+async function deployIcon(evmDappContract) {
+  try {
+    console.log("\n # Deploying contract on ICON chain...");
+    const params = getIconDappDeploymentsParams(
+      NETWORK_LABEL_SECONDARY,
+      evmDappContract
+    );
+    console.log("\n# Params for contract deployment on ICON:", params);
+
+    const receipt = await deployIconContract(params);
+    console.log("\n# Receipt for contract deployment on ICON:", receipt);
+
+    const txResult = await getTxResult(receipt);
+    console.log("\n# TxResult for contract deployment on ICON:", txResult);
+
+    const scoreAddress = txResult["scoreAddress"];
+    const scoreApi = await getScoreApi(scoreAddress);
+    const abi = scoreApi.getList();
+    console.log(
+      "\n# ScoreApi for contract deployment on ICON:",
+      JSON.stringify(abi)
+    );
+    return scoreAddress;
+  } catch (e) {
+    console.log(e);
+    throw new Error("Error deploying contract ICON chain");
+  }
+}
+
+// TODO: implement
+//async function getTransactionsFromBlockICON(blockNumber) {
+//  //
+//}
+
+//async function getBlockICON(hashOrNumber) {
+//  //
+//}
+
+//async function waitResponseMessageEventICON(id, blocksToWait = 20) {
+//  //
+//}
+
+//async function waitRollbackExecutedEventICON(id, blocksToWait = 20) {
+//  //
+//}
+
+//async function waitRollbackMessageEventICON(id, blocksToWait = 20) {
+//  //
+//}
+
+//async function waitEventICON(sig, address, id, blocksToWait = 5) {
+//  //
+//}
+
+/*
+ * filterEventEvm - filters the event logs
+ * @param {string} id - the id of the event
+ * @returns {object} - the filtered event logs
+ * @throws {Error} - if there is an error filtering the event logs
+ */
+function filterEventEvm(event, ...params) {
+  try {
+    const xcallContract = getXcallContractEVM();
+    const filters = xcallContract.filters[event](...params);
+    return filters;
+  } catch (e) {
+    console.log("error filtering event", e);
+    throw new Error("Error filtering event");
+  }
+}
+
+/*
+ * filterRollbackMessageEventEvm - filters the RollbackMessage event logs
+ * @param {string} id - the id of the event
+ * @returns {object} - the filtered event logs
+ * @throws {Error} - if there is an error filtering the event logs
+ */
+function filterRollbackMessageEventEvm(id) {
+  return filterEventEvm("RollbackMessage", id);
+}
+
+/*
+ * filterResponseMessageEventEvm - filters the ResponseMessage event logs
+ * @param {string} id - the id of the event
+ * @returns {object} - the filtered event logs
+ * @throws {Error} - if there is an error filtering the event logs
+ */
+function filterResponseMessageEventEvm(id) {
+  return filterEventEvm("ResponseMessage", id);
+}
+
+/*
  * filterCallExecutedEventEvm - filters the CallExecuted event logs
  * @param {string} id - the id of the event
  * @returns {object} - the filtered event logs
  * @throws {Error} - if there is an error filtering the event logs
  */
 function filterCallExecutedEventEvm(id) {
-  const xcallContract = getXcallContractEVM();
-  const callMessageFilters = xcallContract.filters.CallExecuted(id);
-  return callMessageFilters;
+  return filterEventEvm("CallExecuted", id);
 }
 
 /*
@@ -196,13 +383,7 @@ function filterCallMessageEventEvm(iconDappAddress, evmDappAddress, sn) {
     NETWORK_LABEL_PRIMARY,
     iconDappAddress
   );
-  const xcallContract = getXcallContractEVM();
-  const callMessageFilters = xcallContract.filters.CallMessage(
-    btpAddressSource,
-    evmDappAddress,
-    sn
-  );
-  return callMessageFilters;
+  return filterEventEvm("CallMessage", btpAddressSource, evmDappAddress, sn);
 }
 
 /*
@@ -338,98 +519,6 @@ async function sendSignedTxEVM(contract, method, ...args) {
 }
 
 /*
- * callDappContractMethod - calls the dapp contract method
- * @param {string} method - the method to call
- * @param {string} contract - the address of the contract
- * @param {boolean} useRollback - whether to use rollback
- * @returns {object} - the transaction receipt
- * @throws {Error} - if there is an error calling the dapp contract method
- */
-async function callDappContractMethod(method, contract, useRollback = true) {
-  try {
-    const fee = await getFeeFromIcon(useRollback);
-    // console.log("# fee", fee);
-
-    const txObj = new CallTransactionBuilder()
-      .from(ICON_WALLET.getAddress())
-      .to(contract)
-      .stepLimit(IconConverter.toBigNumber(20000000))
-      .nid(IconConverter.toBigNumber(NID))
-      .nonce(IconConverter.toBigNumber(1))
-      .version(IconConverter.toBigNumber(3))
-      .timestamp(new Date().getTime() * 1000)
-      .method(method)
-      .value(fee)
-      .build();
-
-    const signedTx = new SignedTransaction(txObj, ICON_WALLET);
-    return await ICON_SERVICE.sendTransaction(signedTx).execute();
-  } catch (e) {
-    console.log(e);
-    throw new Error("Error calling contract method");
-  }
-}
-
-/*
- * voteYesFromIcon - calls the voteYes method of the dapp contract
- * @param {string} contract - the address of the contract
- * @param {boolean} useRollback - whether to use rollback
- * @returns {object} - the transaction receipt
- * @throws {Error} - if there is an error voting yes
- */
-async function voteYesFromIcon(contract, useRollback = true) {
-  try {
-    return await callDappContractMethod("voteYes", contract, useRollback);
-  } catch (e) {
-    console.log(e);
-    throw new Error("Error voting yes");
-  }
-}
-
-/*
- * voteNoFromIcon - calls the voteNo method of the dapp contract
- * @param {string} contract - the address of the contract
- * @param {boolean} useRollback - whether to use rollback
- * @returns {object} - the transaction receipt
- * @throws {Error} - if there is an error voting no
- */
-async function voteNoFromIcon(contract, useRollback = true) {
-  try {
-    return await callDappContractMethod("voteNo", contract, useRollback);
-  } catch (e) {
-    console.log(e);
-    throw new Error("Error voting no");
-  }
-}
-
-/*
- * getFeeFromIcon - calls the getFee method of the xcall contract
- * @param {boolean} useRollback - whether to use rollback
- * @returns {object} - the transaction receipt
- * @throws {Error} - if there is an error getting the fee
- */
-async function getFeeFromIcon(useRollback = true) {
-  try {
-    const params = {
-      _net: NETWORK_LABEL_SECONDARY,
-      _rollback: useRollback ? "0x1" : "0x0"
-    };
-    // console.log("# params", params);
-
-    const txObj = new CallBuilder()
-      .to(XCALL_PRIMARY)
-      .method("getFee")
-      .params(params)
-      .build();
-
-    return await ICON_SERVICE.call(txObj).execute();
-  } catch (e) {
-    console.log("error getting fee", e);
-    throw new Error("Error getting fee");
-  }
-}
-
-/*
  * deployEvm - deploys the dapp contract on the EVM chain
  * @returns {string} - the address of the deployed contract
  * @throws {Error} - if there is an error deploying the contract
@@ -458,41 +547,6 @@ async function deployEvm() {
   } catch (e) {
     console.log(e);
     throw new Error("Error deploying contract on EVM chain");
-  }
-}
-
-/*
- * deployIcon - deploys the dapp contract on the ICON chain
- * @param {string} evmDappContract - the address of the EVM dapp contract
- * @returns {string} - the address of the deployed contract
- * @throws {Error} - if there is an error deploying the contract
- */
-async function deployIcon(evmDappContract) {
-  try {
-    console.log("\n # Deploying contract on ICON chain...");
-    const params = getIconDappDeploymentsParams(
-      NETWORK_LABEL_SECONDARY,
-      evmDappContract
-    );
-    console.log("\n# Params for contract deployment on ICON:", params);
-
-    const receipt = await deployIconContract(params);
-    console.log("\n# Receipt for contract deployment on ICON:", receipt);
-
-    const txResult = await getTxResult(receipt);
-    console.log("\n# TxResult for contract deployment on ICON:", txResult);
-
-    const scoreAddress = txResult["scoreAddress"];
-    const scoreApi = await getScoreApi(scoreAddress);
-    const abi = scoreApi.getList();
-    console.log(
-      "\n# ScoreApi for contract deployment on ICON:",
-      JSON.stringify(abi)
-    );
-    return scoreAddress;
-  } catch (e) {
-    console.log(e);
-    throw new Error("Error deploying contract ICON chain");
   }
 }
 
@@ -542,7 +596,9 @@ const lib = {
   filterCallExecutedEventEvm,
   getVotesFromEVM,
   getVotesCapFromEVM,
-  BigNumber
+  BigNumber,
+  filterResponseMessageEventEvm,
+  filterRollbackMessageEventEvm
 };
 
 module.exports = lib;

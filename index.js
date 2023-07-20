@@ -14,7 +14,9 @@ const {
   executeCallEvm,
   filterCallExecutedEventEvm,
   getVotesFromEVM,
-  getVotesCapFromEVM
+  getVotesCapFromEVM,
+  filterResponseMessageEventEvm,
+  filterRollbackMessageEventEvm
   // BigNumber
 } = require("./utils/lib");
 
@@ -76,7 +78,7 @@ async function tests(contracts, rollback = false) {
       parsedCallMessageSentEvent
     );
 
-    // filter call message event evm
+    // filter CallMessage event evm
     const callMessageEventEvmFilters = filterCallMessageEventEvm(
       contracts.primary,
       contracts.secondary,
@@ -87,7 +89,7 @@ async function tests(contracts, rollback = false) {
       callMessageEventEvmFilters
     );
 
-    // wait for call message event evm
+    // wait for CallMessage event evm
     const eventsEvm = await waitEventEVM(callMessageEventEvmFilters);
     const messageId = eventsEvm[0].args._reqId;
     const data = eventsEvm[0].args._data;
@@ -99,14 +101,14 @@ async function tests(contracts, rollback = false) {
     const executeCallTxHash = await executeCallEvm(messageId, data);
     console.log("\n# execute call tx hash:", executeCallTxHash.transactionHash);
 
-    // filter call message event evm
+    // filter CallExecuted event evm
     const callExecutedEventEvmFilters = filterCallExecutedEventEvm(messageId);
     console.log(
       "\n# callExecuted event evm filters:",
       callExecutedEventEvmFilters
     );
 
-    // wait for call executed event evm
+    // wait for CallExecuted event evm
     const eventsEvm2 = await waitEventEVM(callExecutedEventEvmFilters);
     console.log("\n# events params:");
     console.log(JSON.stringify(eventsEvm2[0].args));
@@ -117,9 +119,17 @@ async function tests(contracts, rollback = false) {
       // console.log("\n# votes from EVM:", votesFromEVM);
     } else {
       // execute logic with rollback because current votes is equal or grater than votes cap
+      // TODO: implement rollback logic
       // fetch ResponseMessage event on origin chain
+      //
       // fetch RollbackMessage event on origin chain
+      //
+      // fetch votes from origin chain before rollback
+      //
       // call the payable method executeRollback on the xcall contract of the origin chain
+      //
+      // fetch votes from origin chain after rollback
+      //
       // fetch RollbackExecuted event on origin chain
     }
   } catch (e) {

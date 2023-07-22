@@ -12,6 +12,10 @@ const config = {
     custom: "https://server02.espanicon.team/api/v3",
     sepolia: "https://sepolia.infura.io/v3/ffbf8ebe228f4758ae82e175640275e0"
   },
+  tracker: {
+    hostname: "tracker.berlin.icon.community",
+    logs: "/api/v1/logs?address="
+  },
   contract: {
     icon: {
       chain: "cx0000000000000000000000000000000000000000",

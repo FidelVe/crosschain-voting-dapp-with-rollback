@@ -1,5 +1,6 @@
 const fs = require("fs");
 const config = require("./config");
+const customRequest = require("./customRequest");
 
 const {
   contract,
@@ -15,7 +16,8 @@ const {
   NETWORK_LABEL_PRIMARY,
   NETWORK_LABEL_SECONDARY,
   deploymentsPath,
-  xcallAbiPath
+  xcallAbiPath,
+  tracker
 } = config;
 
 /*
@@ -156,6 +158,20 @@ function getBtpAddress(label, address) {
   return `btp://${label}/${address}`;
 }
 
+function parseEventResponseFromTracker(response) {
+  const result = response.map(event => {
+    const indexed =
+      event.indexed != null && typeof event.indexed === "string"
+        ? JSON.parse(event.indexed)
+        : [];
+    return {
+      ...event,
+      scoreAddress: event.address,
+      indexed: indexed
+    };
+  });
+  return result;
+}
 /*
  * filterEventICON - filters the event logs
  * @param {object} eventlogs - the event logs
@@ -164,7 +180,7 @@ function getBtpAddress(label, address) {
  * @returns {object} - the filtered event logs
  * @throws {Error} - if there is an error filtering the event logs
  */
-async function filterEventICON(eventlogs, sig, address) {
+function filterEventICON(eventlogs, sig, address) {
   return eventlogs.filter(event => {
     return (
       event.indexed &&
@@ -271,7 +287,10 @@ const utils = {
   NETWORK_LABEL_PRIMARY,
   NETWORK_LABEL_SECONDARY,
   deploymentsPath,
-  xcallAbiPath
+  xcallAbiPath,
+  tracker,
+  customRequest,
+  parseEventResponseFromTracker
 };
 
 module.exports = utils;

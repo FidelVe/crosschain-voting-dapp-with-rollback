@@ -15,8 +15,12 @@ const {
   filterCallExecutedEventEvm,
   getVotesFromEVM,
   getVotesCapFromEVM,
-  filterResponseMessageEventEvm,
-  filterRollbackMessageEventEvm
+  waitResponseMessageEventICON,
+  // waitRollbackExecutedEventICON,
+  waitRollbackMessageEventICON,
+  getVotesFromICON,
+  executeRollbackICON
+  // fetchEventsFromTracker
   // BigNumber
 } = require("./utils/lib");
 
@@ -63,35 +67,42 @@ async function tests(contracts, rollback = false) {
     const txResult = await getTxResult(voteYesFromIconResult);
     console.log("\n# tx result for calling voteYes:", txResult.txHash);
 
-    // filter call message sent event
+    // filter CallMessageSent event
     const callMessageSentEvent = await filterCallMessageSentEvent(
       txResult.eventLogs
     );
-    console.log("\n# call message sent event:", callMessageSentEvent);
+    console.log("\n# CallMessageSent event:", callMessageSentEvent);
 
-    // parse call message sent event
+    // parse CallMessageSent event
     const parsedCallMessageSentEvent = await parseCallMessageSentEvent(
       callMessageSentEvent
     );
     console.log(
-      "\n# parsed call message sent event:",
+      "\n# parsed CallMessageSent event:",
       parsedCallMessageSentEvent
     );
 
+    // _sn from source
+    const snFromSource = parsedCallMessageSentEvent._sn;
     // filter CallMessage event evm
     const callMessageEventEvmFilters = filterCallMessageEventEvm(
       contracts.primary,
       contracts.secondary,
-      parsedCallMessageSentEvent._sn
+      snFromSource
     );
     console.log(
-      "\n# call message event evm filters:",
+      "\n# CallMessage event evm filters:",
       callMessageEventEvmFilters
     );
 
     // wait for CallMessage event evm
     const eventsEvm = await waitEventEVM(callMessageEventEvmFilters);
+
+    // fetch messageId from CallMessage event evm
     const messageId = eventsEvm[0].args._reqId;
+    console.log("\n# Message ID:", messageId);
+
+    // fetch data from CallMessage event evm
     const data = eventsEvm[0].args._data;
     console.log("\n# events params:");
     console.log(JSON.stringify(eventsEvm[0].args));
@@ -120,15 +131,49 @@ async function tests(contracts, rollback = false) {
     } else {
       // execute logic with rollback because current votes is equal or grater than votes cap
       // TODO: implement rollback logic
+      // waitResponseMessageEventICON,
+      // waitRollbackExecutedEventICON,
+      // waitRollbackMessageEventICON
       // fetch ResponseMessage event on origin chain
-      //
+      const responseMessageEvent = await waitResponseMessageEventICON(
+        snFromSource
+      );
+      console.log("\n# ResponseMessage  event:", responseMessageEvent);
       // fetch RollbackMessage event on origin chain
-      //
+      const rollbackMessageEvent = await waitRollbackMessageEventICON(
+        snFromSource
+      );
+      console.log("\n# RollbackMessage  event:", rollbackMessageEvent);
       // fetch votes from origin chain before rollback
-      //
+      const votesFromICONBeforeRollback = await getVotesFromICON(
+        contracts.primary
+      );
+      console.log(
+        "\n# votes from ICON before rollback:",
+        votesFromICONBeforeRollback
+      );
       // call the payable method executeRollback on the xcall contract of the origin chain
-      //
+      // DEBUG:
+      const executeRollbackTxHash = await executeRollbackICON(
+        rollbackMessageEvent.indexed[1]
+      );
+      // get tx result
+      const executeRollbackTxResult = await getTxResult(executeRollbackTxHash);
+      console.log(
+        "\n# tx result for calling executeRollback:",
+        executeRollbackTxResult.txHash
+      );
       // fetch votes from origin chain after rollback
+      const votesFromICONAfterRollback = await getVotesFromICON(
+        contracts.primary
+      );
+      console.log(
+        "\n# votes from ICON after rollback:",
+        votesFromICONAfterRollback
+      );
+      // fetch votes from destination chain after rollback
+      const votesFromEVM = await getVotesFromEVM(contracts.secondary);
+      console.log("\n# votes from EVM:", votesFromEVM);
       //
       // fetch RollbackExecuted event on origin chain
     }

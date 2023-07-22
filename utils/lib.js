@@ -20,6 +20,8 @@ const {
   NETWORK_LABEL_SECONDARY,
   deploymentsPath,
   xcallAbiPath,
+  tracker,
+  customRequest,
   // methods
   getIconContractByteCode,
   isDeployed,
@@ -35,7 +37,8 @@ const {
   sleep,
   strToHex,
   strToHexPadded,
-  fileExists
+  fileExists,
+  parseEventResponseFromTracker
 } = utils;
 
 const {
@@ -87,6 +90,20 @@ function validateConfig() {
   } catch (e) {
     console.log(e.message);
     throw new Error("Error validating config");
+  }
+}
+
+async function fetchEventsFromTracker() {
+  try {
+    const response = await customRequest(
+      `${tracker.logs}${XCALL_PRIMARY}`,
+      false,
+      tracker.hostname
+    );
+    return response;
+  } catch (e) {
+    console.log("error fetching events from tracker", e);
+    throw new Error("Error fetching events from tracker");
   }
 }
 
@@ -237,6 +254,26 @@ async function voteNoFromIcon(contract, useRollback = true) {
 }
 
 /*
+ * getVotesFromICON - calls the getVotes method of the dapp contract
+ * @param {string} contract - the address of the contract
+ * @returns {object} - the transaction receipt
+ * @throws {Error} - if there is an error getting the votes
+ */
+async function getVotesFromICON(contract) {
+  try {
+    const txObj = new CallBuilder()
+      .to(contract)
+      .method("getVotes")
+      .build();
+
+    return await ICON_SERVICE.call(txObj).execute();
+  } catch (e) {
+    console.log("error getting votes", e);
+    throw new Error("Error getting votes");
+  }
+}
+
+/*
  * getFeeFromIcon - calls the getFee method of the xcall contract
  * @param {boolean} useRollback - whether to use rollback
  * @returns {object} - the transaction receipt
@@ -298,30 +335,243 @@ async function deployIcon(evmDappContract) {
   }
 }
 
-// TODO: implement
-//async function getTransactionsFromBlockICON(blockNumber) {
-//  //
-//}
+/*
+ * getTransactionsFromBlockICON - gets the transactions from a block
+ * @param {object} block - the block
+ * @returns {array} - the transactions
+ * @throws {Error} - if there is an error getting the transactions
+ */
+async function getTransactionsFromBlockICON(block) {
+  const transactions = [];
+  try {
+    for (const tx of block.confirmedTransactionList) {
+      const txResult = await getTxResult(tx.txHash);
+      transactions.push(txResult);
+      if (txResult === null) {
+        throw new Error("txResult is null");
+      }
+    }
+  } catch (e) {
+    console.log("error running getTransactionsFromBlock", e);
+    throw new Error("Error running getTransactionsFromBlock");
+  }
+  return transactions;
+}
 
-//async function getBlockICON(hashOrNumber) {
-//  //
-//}
+/*
+ * getBlockICON - gets a block
+ * @param {string} hashOrNumber - the block hash or number
+ * @returns {object} - the block
+ * @throws {Error} - if there is an error getting the block
+ */
+async function getBlockICON(hashOrNumber = null) {
+  try {
+    if (hashOrNumber == null || hashOrNumber === "latest") {
+      return await ICON_SERVICE.getLastBlock().execute();
+    } else if (typeof hashOrNumber === "string") {
+      const isHash =
+        !Number.isNaN(Number(hashOrNumber)) && hashOrNumber.slice(0, 2) === "0x"
+          ? true
+          : false;
+      if (isHash) {
+        return await ICON_SERVICE.getBlockByHash(hashOrNumber).execute();
+      }
+    } else if (typeof hashOrNumber === "number") {
+      return await ICON_SERVICE.getBlockByHeight(hashOrNumber).execute();
+    }
+    // raise error if not hash or number
+    throw new Error("invalid type for param hashOrNumber");
+  } catch (e) {
+    console.log("error running getBlock", e);
+    throw new Error("Error running getBlock");
+  }
+}
 
-//async function waitResponseMessageEventICON(id, blocksToWait = 20) {
-//  //
-//}
+/*
+ * waitResponseMessageEventICON - waits for the ResponseMessage event
+ * @param {string} contractAddress - the address of the contract
+ * @param {number} id - the id of the event
+ * @param {number} blocksToWait - the number of blocks to wait
+ * @returns {object} - the event
+ * @throws {Error} - if there is an error waiting for the event
+ */
+async function waitResponseMessageEventICON(id) {
+  const sig = "ResponseMessage(int,int,str)";
+  const parseId = id.toHexString();
+  return await waitEventFromTrackerICON(sig, XCALL_PRIMARY, parseId);
+}
 
-//async function waitRollbackExecutedEventICON(id, blocksToWait = 20) {
-//  //
-//}
+/*
+ * waitRollbackExecutedEventICON - waits for the RollbackExecuted event
+ * @param {string} contractAddress - the address of the contract
+ * @param {number} id - the id of the event
+ * @param {number} blocksToWait - the number of blocks to wait
+ * @returns {object} - the event
+ * @throws {Error} - if there is an error waiting for the event
+ */
+async function waitRollbackExecutedEventICON(id) {
+  const sig = "RollbackExecuted(int,int,str)";
+  const parseId = id.toHexString();
+  return await waitEventFromTrackerICON(sig, XCALL_PRIMARY, parseId);
+}
 
-//async function waitRollbackMessageEventICON(id, blocksToWait = 20) {
-//  //
-//}
+async function waitRollbackMessageEventICON(id) {
+  const sig = "RollbackMessage(int)";
+  const parseId = id.toHexString();
+  return await waitEventFromTrackerICON(sig, XCALL_PRIMARY, parseId);
+}
 
-//async function waitEventICON(sig, address, id, blocksToWait = 5) {
-//  //
-//}
+async function executeRollbackICON(id) {
+  try {
+    const params = {
+      _sn: id
+    };
+    console.log("executeRollback params", params);
+    const txObj = new CallTransactionBuilder()
+      .from(ICON_WALLET.getAddress())
+      .to(XCALL_PRIMARY)
+      .params(params)
+      .stepLimit(IconConverter.toBigNumber(20000000))
+      .nid(IconConverter.toBigNumber(NID))
+      .nonce(IconConverter.toBigNumber(1))
+      .version(IconConverter.toBigNumber(3))
+      .timestamp(new Date().getTime() * 1000)
+      .method("executeRollback")
+      .build();
+
+    const signedTx = new SignedTransaction(txObj, ICON_WALLET);
+    return await ICON_SERVICE.sendTransaction(signedTx).execute();
+  } catch (e) {
+    console.log(e);
+    throw new Error(
+      "Error calling executeRollback method on xCall contract on source chain"
+    );
+  }
+}
+
+/*
+ * waitEventFromTrackerICON - waits for an event from the tracker
+ * @param {string} sig - the signature of the event
+ * @param {string} address - the address of the contract
+ * @param {number} id - the id of the event
+ * @param {number} maxMinutesToWait - the max number of minutes to wait
+ * @returns {object} - the event
+ * @throws {Error} - if there is an error waiting for the event
+ */
+async function waitEventFromTrackerICON(
+  sig,
+  address,
+  id,
+  maxMinutesToWait = 40
+) {
+  try {
+    console.log(`## Waiting for event ${sig} on ${address} with id ${id}`);
+
+    let minutesWaited = 0;
+    let highestIdFound = 0;
+    let minsToWaitOnEachLoop = 1;
+
+    console.log(
+      `# If destination chain is Sepolia, the wait period is around 20 min for the event to be raised because of the block finality.`
+    );
+    while (minutesWaited < maxMinutesToWait) {
+      let events = await fetchEventsFromTracker();
+      const parsedEvent = parseEventResponseFromTracker(events);
+      const filterEvents = filterEventICON(parsedEvent, sig, address);
+
+      if (filterEvents.length > 0) {
+        console.log(`## Found event ${sig}`);
+        for (const event of filterEvents) {
+          const idNumber = parseInt(id);
+          const eventIdNumber = parseInt(event.indexed[1]);
+          if (eventIdNumber == idNumber) {
+            return event;
+          } else {
+            if (eventIdNumber >= highestIdFound) {
+              highestIdFound = eventIdNumber;
+              console.log(
+                `## Event id does not match. Found Id: ${eventIdNumber} (${
+                  event.indexed[1]
+                }), Looking for Id: ${idNumber} (${id})`
+              );
+              console.log(
+                `#  Event not found, will continue to wait for ${minsToWaitOnEachLoop} minutes`
+              );
+            } else {
+              continue;
+            }
+          }
+        }
+        console.log(`# waiting (waited for ${minutesWaited} minutes so far)..`);
+        console.log("# press ctrl + c to exit\n");
+        minutesWaited += minsToWaitOnEachLoop;
+        await sleep(60000 * minsToWaitOnEachLoop);
+      }
+    }
+
+    console.log(`## Waited for ${maxMinutesToWait} minutes`);
+    throw new Error(`Event with signature "${sig}" never raised`);
+  } catch (e) {
+    console.log("error waiting for event", e);
+    throw new Error("Error waiting for event");
+  }
+}
+
+async function waitEventICON(sig, address, id, maxMinutesToWait = 25) {
+  try {
+    console.log(`## Waiting for event ${sig} on ${address} with id ${id}`);
+    const latestBlock = await getBlockICON("latest");
+    let blockNumber = latestBlock.height - 2;
+    let minutesWaited = 0;
+
+    while (minutesWaited < maxMinutesToWait) {
+      const latestBlock = await getBlockICON("latest");
+      if (blockNumber > latestBlock.height) {
+        minutesWaited += 1;
+        await sleep(1000);
+        continue;
+      }
+      const parsedBlockNumber = blockNumber.toString();
+      console.log(`## Fetching block ${parsedBlockNumber} for event`);
+      const block = await getBlockICON(blockNumber);
+      const txsInBlock = await getTransactionsFromBlockICON(block);
+      for (const tx of txsInBlock) {
+        const filteredEvents = filterEventICON(tx.eventLogs, sig, address);
+        if (filteredEvents.length > 0) {
+          console.log(`## Found event ${sig} on block ${parsedBlockNumber}`);
+          for (const event of filteredEvents) {
+            const idNumber = parseInt(id);
+            const eventIdNumber = parseInt(event.indexed[1]);
+            if (eventIdNumber == idNumber) {
+              return event;
+            } else {
+              if (eventIdNumber > idNumber) {
+                // if the event id is greater than the expected id, then the event was raised in a previous block that was not checked
+                throw new Error("Event id is greater than expected");
+              }
+              console.log(
+                `## Event id does not match. Found Id: ${eventIdNumber}, Looking for Id: ${idNumber}`
+              );
+              console.log(
+                "# If destination chain is Sepolia, the wait period is around 20 min for the event to be raised because of the block finality, script will wait for 5 more minutes and will continue to check for event after that period"
+              );
+              console.log("# press ctrl + c to exit");
+              console.log("# waiting..");
+              minutesWaited += 5;
+              await sleep(300000);
+            }
+          }
+        }
+      }
+      blockNumber++;
+    }
+
+    throw new Error(`Event with signature "${sig}" never raised`);
+  } catch (e) {
+    console.log("error waiting for event", e);
+  }
+  return null;
+}
 
 /*
  * filterEventEvm - filters the event logs
@@ -598,7 +848,14 @@ const lib = {
   getVotesCapFromEVM,
   BigNumber,
   filterResponseMessageEventEvm,
-  filterRollbackMessageEventEvm
+  filterRollbackMessageEventEvm,
+  waitResponseMessageEventICON,
+  waitRollbackExecutedEventICON,
+  waitRollbackMessageEventICON,
+  fetchEventsFromTracker,
+  waitEventFromTrackerICON,
+  getVotesFromICON,
+  executeRollbackICON
 };
 
 module.exports = lib;

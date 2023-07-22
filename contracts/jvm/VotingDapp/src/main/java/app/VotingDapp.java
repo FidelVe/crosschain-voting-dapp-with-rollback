@@ -102,12 +102,14 @@ public class VotingDapp {
         Context.println("handleCallMessage payload:" + payload);
         // If the caller is the xcall contract, then update the local count
         if (caller.equals(xcallSourceAddress)) {
-            if (payload.equals(this.payloadYes.get())) {
+            if (payload.equals(this.rollbackYes.get())) {
                 BigInteger sum = this.countOfYes.get().subtract(BigInteger.ONE);
                 this.countOfYes.set(sum);
-            } else if (payload.equals(this.payloadNo.get())) {
+            } else if (payload.equals(this.rollbackNo.get())) {
                 BigInteger sum = this.countOfNo.get().subtract(BigInteger.ONE);
                 this.countOfNo.set(sum);
+            } else {
+                Context.revert("Invalid payload for rollback");
             }
         } else {
             Context.revert("Unauthorized caller");

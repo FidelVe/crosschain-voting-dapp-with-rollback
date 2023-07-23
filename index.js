@@ -16,12 +16,9 @@ const {
   getVotesFromEVM,
   getVotesCapFromEVM,
   waitResponseMessageEventICON,
-  // waitRollbackExecutedEventICON,
   waitRollbackMessageEventICON,
   getVotesFromICON,
   executeRollbackICON
-  // fetchEventsFromTracker
-  // BigNumber
 } = require("./utils/lib");
 
 /*
@@ -124,16 +121,8 @@ async function tests(contracts, rollback = false) {
     console.log("\n# events params:");
     console.log(JSON.stringify(eventsEvm2[0].args));
 
-    if (!rollback) {
-      // check votes from destination chain
-      // const votesFromEVM = await getVotesFromEVM(contracts.secondary);
-      // console.log("\n# votes from EVM:", votesFromEVM);
-    } else {
+    if (rollback) {
       // execute logic with rollback because current votes is equal or grater than votes cap
-      // TODO: implement rollback logic
-      // waitResponseMessageEventICON,
-      // waitRollbackExecutedEventICON,
-      // waitRollbackMessageEventICON
       // fetch ResponseMessage event on origin chain
       const responseMessageEvent = await waitResponseMessageEventICON(
         snFromSource
@@ -153,7 +142,7 @@ async function tests(contracts, rollback = false) {
         votesFromICONBeforeRollback
       );
       // call the payable method executeRollback on the xcall contract of the origin chain
-      // DEBUG:
+      console.log("\n# invoking executeRollback call on origin chain");
       const executeRollbackTxHash = await executeRollbackICON(
         rollbackMessageEvent.indexed[1]
       );
@@ -174,8 +163,6 @@ async function tests(contracts, rollback = false) {
       // fetch votes from destination chain after rollback
       const votesFromEVM = await getVotesFromEVM(contracts.secondary);
       console.log("\n# votes from EVM:", votesFromEVM);
-      //
-      // fetch RollbackExecuted event on origin chain
     }
   } catch (e) {
     console.log("error running tests", e);

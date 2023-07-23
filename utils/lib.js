@@ -426,7 +426,6 @@ async function executeRollbackICON(id) {
     const params = {
       _sn: id
     };
-    console.log("executeRollback params", params);
     const txObj = new CallTransactionBuilder()
       .from(ICON_WALLET.getAddress())
       .to(XCALL_PRIMARY)
@@ -494,14 +493,14 @@ async function waitEventFromTrackerICON(
                   event.indexed[1]
                 }), Looking for Id: ${idNumber} (${id})`
               );
-              console.log(
-                `#  Event not found, will continue to wait for ${minsToWaitOnEachLoop} minutes`
-              );
             } else {
               continue;
             }
           }
         }
+        console.log(
+          `#  Event not found, will continue to wait for ${minsToWaitOnEachLoop} minutes`
+        );
         console.log(`# waiting (waited for ${minutesWaited} minutes so far)..`);
         console.log("# press ctrl + c to exit\n");
         minutesWaited += minsToWaitOnEachLoop;
@@ -855,7 +854,8 @@ const lib = {
   fetchEventsFromTracker,
   waitEventFromTrackerICON,
   getVotesFromICON,
-  executeRollbackICON
+  executeRollbackICON,
+  waitEventICON
 };
 
 module.exports = lib;

@@ -1,6 +1,14 @@
-# Crosschain voting dapp
+# Crosschain voting dapp with rollback
 
-The following is a cross chain DApp to showcase ICON XCall, it consists of a set of smart contracts deployed on Berlin (ICON) and Sepolia (Ethereum) to cast votes on the ICON chain and it will keep a ledger of the votes on both chains.
+The following is a cross chain dApp to showcase ICON xCall, it consists of a set of smart contracts deployed on Berlin (ICON) and Sepolia (Ethereum) to cast votes on the ICON chain and it will keep a ledger of the votes on both chains.
+
+The smart contract on Berlin has a set of methods called `voteYes()` and `voteNo()` to cast a vote either for "No" or for "Yes", it saves the votes internally and then sends a cross chain message using xCall to the contract on the Sepolia network.
+
+The contract on the Sepolia network receives the cross chain message and updates the ledger inside the smart contract.
+
+To showcase the rollback functionality of xCall, the smart contract on Sepolia has a max cap on the allowed amount of votes that can be casted, once this number is reached a revert occurs on the smart contract and xCall triggers the rollback process.
+
+Once the rollback is received on the origin chain, the java smart contract reverts the vote originally casted.
 
 ## Setup
 
@@ -37,6 +45,11 @@ To run tests for the Java contract move into the `./contracts/jvm/` folder and r
 ```
 cd contracts/jvm/
 ./gradlew clean test
+```
+
+To run tests for the Solidity contract use the following command:
+``` bash
+npm run test-solidity
 ```
 
 ## Run main script

@@ -9,19 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeAll;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
-import score.Address;
-import score.Context;
-import score.VarDB;
-import score.annotation.EventLog;
-import score.annotation.External;
-import score.annotation.Optional;
-import score.annotation.Payable;
-import scorex.util.HashMap;
-
-import java.math.BigInteger;
-import java.util.Map;
 
 public class VotingDappTest extends TestBase {
     private static final ServiceManager sm = getServiceManager();
@@ -33,10 +20,6 @@ public class VotingDappTest extends TestBase {
     public static void setup() throws Exception {
         DappScore = sm.deploy(owner, VotingDapp.class, owner.getAddress(), btpAddress);
     }
-
-    // @Test
-    // public void hasGetVotesMethod() {
-    // }
 
     @Test
     public void hasGetXCallContractAddress() {
@@ -66,11 +49,5 @@ public class VotingDappTest extends TestBase {
     public void invokeGetVotes() {
         Object response = DappScore.call("getVotes");
         System.out.println("votes: " + response );
-    }
-
-    @Test
-    public void voidTest() {
-        System.out.println("Hello, world!");
-        assertEquals(1,1);
     }
 }

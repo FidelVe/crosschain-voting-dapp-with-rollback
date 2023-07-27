@@ -46,7 +46,7 @@ public class VotingDappTest extends TestBase {
     }
 
     @Test
-    public void invokeGetVotes() {
+    public void callGetVotes() {
         Object response = DappScore.call("getVotes");
         System.out.println("votes: " + response );
     }

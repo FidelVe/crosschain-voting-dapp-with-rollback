@@ -28,6 +28,11 @@ public class VotingDapp {
     private final VarDB<String> rollbackNo = Context.newVarDB(ROLLBACK_NO, String.class);
     private final VarDB<String> payloadNo = Context.newVarDB(PAYLOAD_NO, String.class);
 
+    /*
+     * Constructor
+     * @param _sourceXCallContract - the address of the XCall contract
+     * @param _destinationBtpAddress - the BTP address of the destination chain
+     */
     public VotingDapp(Address _sourceXCallContract, String _destinationBtpAddress) {
         this.destinationBtpAddress.set(_destinationBtpAddress);
         this.xcallContractAddress.set(_sourceXCallContract);
@@ -39,12 +44,23 @@ public class VotingDapp {
         this.rollbackNo.set(ROLLBACK_NO);
     }
 
+    /*
+     * Send a call message to the XCall contract
+     * @param _data - the payload to send
+     * @param _rollback - the rollback payload to send
+     * @return the id of the call message
+     */
     private BigInteger _sendCallMessage(byte[] _data, @Optional byte[] _rollback) {
         Address xcallSourceAddress = this.xcallContractAddress.get();
         String _to = this.destinationBtpAddress.get();
         return Context.call(BigInteger.class, Context.getValue(), xcallSourceAddress, "sendCallMessage", _to, _data, _rollback);
     }
 
+    /*
+     * Public method to vote Yes
+     * Increments the local count of Yes votes
+     * Sends a call message to the XCall contract
+     */
     @Payable
     @External
     public void voteYes() {
@@ -60,6 +76,11 @@ public class VotingDapp {
         Context.println("sendCallMessage Response:" + id);
     }
 
+    /*
+     * Public method to vote No
+     * Increments the local count of No votes
+     * Sends a call message to the XCall contract
+     */
     @Payable
     @External
     public void voteNo() {
@@ -75,6 +96,10 @@ public class VotingDapp {
         Context.println("sendCallMessage Response:" + id);
     }
 
+    /*
+     * Public method to get the current vote count
+     * @return a map of the current vote count
+     */
     @External(readonly = true)
     public Map<String, BigInteger> getVotes() {
         Map<String, BigInteger> votesMap = new HashMap<>();
@@ -83,16 +108,29 @@ public class VotingDapp {
         return votesMap;
     }
 
+    /*
+     * Public method to get the destination BTP address
+     * @return the destination BTP address
+     */
     @External(readonly = true)
     public String getDestinationBtpAddress() {
         return this.destinationBtpAddress.get();
     }
 
+    /*
+     * Public method to get the XCall contract address
+     * @return the XCall contract address
+     */
     @External(readonly = true)
     public Address getXCallContractAddress() {
         return this.xcallContractAddress.get();
     }
 
+    /*
+     * handles the call message from the XCall contract
+     * @param _from - the address of the caller
+     * @param _data - the payload
+     */
     @Payable
     @External
     public void handleCallMessage(String _from, byte[] _data) {
@@ -117,6 +155,11 @@ public class VotingDapp {
         RollbackDataReceived(_from, _data);
     }
 
+    /*
+     * Event emitted when a rollback message is received
+     * @param _from - the address of the caller
+     * @param _rollback - the rollback payload
+     */
     @EventLog
     public void RollbackDataReceived(String _from, byte[] _rollback) {}
 }

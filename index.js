@@ -87,13 +87,21 @@ async function tests(contracts, rollback = false) {
       contracts.secondary,
       snFromSource
     );
+    const callMessageEventEvmFilters2 = filterCallMessageEventEvm(
+      contracts.primary,
+      contracts.secondary,
+      null
+    );
     console.log(
       "\n# CallMessage event evm filters:",
       callMessageEventEvmFilters
     );
 
     // wait for CallMessage event evm
-    const eventsEvm = await waitEventEVM(callMessageEventEvmFilters);
+    const eventsEvm = await waitEventEVM(
+      callMessageEventEvmFilters,
+      callMessageEventEvmFilters2
+    );
 
     // fetch messageId from CallMessage event evm
     const messageId = eventsEvm[0].args._reqId;

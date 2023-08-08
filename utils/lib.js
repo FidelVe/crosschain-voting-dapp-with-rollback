@@ -713,27 +713,55 @@ function getContractObjectEVM(abi, address) {
  * @returns {object} - the event logs
  * @throws {Error} - if there is an error waiting for the event
  */
-async function waitEventEVM(filterCM) {
+async function waitEventEVM(filterCM, filterCM2 = null) {
   const contract = getXcallContractEVM();
   let height = await contract.provider.getBlockNumber();
   let next = height + 1;
   console.log("block height", height);
-  while (true) {
-    if (height == next) {
-      await sleep(1000);
-      next = (await contract.provider.getBlockNumber()) + 1;
-      continue;
-    }
-    for (; height < next; height++) {
-      console.log(`waitEventEvmChain: ${height} -> ${next}`);
-      const events = await contract.queryFilter(filterCM, height);
-      if (events.length > 0) {
-        return events;
+  const maxSeconds = 30 * 60;
+  let secondsWaited = 0;
+  if (filterCM2 != null) {
+    await fetchEventEVMInBlockRange(filterCM2, -100, contract);
+  }
+  while (secondsWaited < maxSeconds) {
+    try {
+      if (height == next) {
+        await sleep(1000);
+        secondsWaited++;
+        next = (await contract.provider.getBlockNumber()) + 1;
+        continue;
       }
+      for (; height < next; height++) {
+        const parsedMinutes = secondsWaited / 60;
+        console.log(
+          `waitEventEvmChain: ${height} -> ${next}. (time waited ${parsedMinutes.toFixed(
+            2
+          )} minutes)`
+        );
+        const events = await contract.queryFilter(filterCM, height);
+        if (events.length > 0) {
+          return events;
+        }
+      }
+    } catch (e) {
+      console.log("waitEventEvmChain error", e);
     }
   }
+
+  throw new Error("Error waiting for event");
 }
 
+async function fetchEventEVMInBlockRange(filter, blocks = -100, contract) {
+  try {
+    const events = await contract.queryFilter(filter, blocks, "latest");
+    if (events.length > 0) {
+      console.log("fetchEventEVMInBlockRange", events[0].topics);
+      console.log("Latest event ID found", events[0].topics[3]);
+    }
+  } catch (e) {
+    console.log("fetchEventEVMInBlockRange error", e);
+  }
+}
 /*
  * executeCallEvm - calls the executeCall method of the xcall contract
  * @param {string} id - the id of the cross chain transaction
